@@ -4,7 +4,8 @@ var options ={
   width : 960,
   height : 750,
   enemies: 42,
-  enemyRadius: 10
+  enemyRadius: 10,
+  timeFactor: .5
 };
 
 var stats = {
@@ -57,7 +58,7 @@ playerContainer.append("svg:" + playerSpecs.shape)
                .attr("fill-opacity",1e-6)
              .transition()
                .attr("fill-opacity",0.25)
-               .duration(1500)
+               .duration(1500*options.timeFactor)
                .attr("stroke-opacity",1)
                .attr("stroke-width",2);
 
@@ -82,78 +83,95 @@ var makeEnemies = function(){
 
 var enemyIds = makeEnemies;
 
+var createEnemyPositions = function(){
+  var results = [];
+  for(var i = 0; i < options.enemies; i++){
+    results.push({x: Math.random() * options.width, y: Math.random() * options.height});
+  }
+  return results;
+};
+
 var enemies = board.selectAll(".enemy")
-                   .data(enemyIds,function(id){return id;});
+                   .data(createEnemyPositions());
 
 // Add enemies to board
 enemies.enter().append("svg:circle")
        .attr("class","enemy")
        .attr("stroke","#00A000")
        .attr("r", 0)
-       .attr("cx", function(){return Math.random() * options.width;})
-       .attr("cy", function(){return Math.random() * options.height;})
        .attr("stroke-opacity",1e-6)
        .attr("stroke-width", 1e-6)
        .attr("fill","none")
     .transition()
-       .duration(3000)
+       .duration(3000*options.timeFactor)
        .attr("r",15)
        .attr("stroke-opacity",1)
        .attr("stroke-width",1.1);
 
-enemies.attr("x",function(id){
-  return 10 * id;
-});
+
 
 // Allow enemies to move randomly around the board
 var enemyMethods = {
   moveEnemy : function(){
     d3.selectAll(".enemy")
     .transition()
-      .duration(1250)
+      .duration(1250*options.timeFactor)
       .attr("r",function(){return Math.random()*15 + 3;})
       .attr("cx", function(){return Math.random() * options.width;})
       .attr("cy", function(){return Math.random() * options.height;})
-      .ease("bounce");
+      .tween("custom", tweenCollision);
   }
+
 };
 
 
 
 // Check for collisions between player and any enemies
-//     Current collision detection implementation is inefficient and inaccurate
-//     It could be improved by comparing player positions to the line the enemies travel each tick
-var checkCollisions = function() {
-  var nodes = d3.selectAll(".enemy");
+var checkCollisions = function(enemy) {
   var player = d3.select(".playerContainer");
   var playerX = 1*player.attr("x") + (player.attr("width") / 2);
   var playerY = 1*player.attr("y") + (player.attr("height") / 2);
   var playerR = 8; // modeling player as circle to simplify calculations
-  for (var i = 0; i < nodes.length; i++) {
-    var enemy = d3.select(nodes[0][i]);
-    var enemyX = enemy.attr("cx");
-    var enemyY = enemy.attr("cy");
-    var enemyR = enemy.attr("r");
-    var distance = Math.sqrt(Math.pow((enemyY - playerY),2) + Math.pow((enemyX - playerX),2));
-    console.log(distance);
-    if (distance < enemyR + playerR) {
-      collide();
-    }
+  var enemyX = 1*enemy.attr("cx");
+  var enemyY = 1*enemy.attr("cy");
+  var enemyR = 1*enemy.attr("r");
+  var distance = Math.sqrt(Math.pow((enemyY - playerY),2) + Math.pow((enemyX - playerX),2));
+  if (distance < enemyR + playerR) {
+    collide();
   }
 };
 
 // On collision, reset score and increase collisions count
 var collide = function() {
-  console.log("collision!");
-  window.stats.current = 0;
-  window.collisions++;
-  updateScores([stats.current, stats.highScore, stats.collisions]);
+  // console.log("collision!");
+  stats.current = 0;
+  stats.collisions++;
+  updateScores(stats.current, stats.highScore, stats.collisions);
+};
+
+var tweenCollision = function(endData) {
+  var currentEnemy = d3.select(this);
+  var startX = 1*currentEnemy.attr("cx");
+  var startY = 1*currentEnemy.attr("cy");
+  var endX = endData.x;
+  var endY = endData.y;
+
+
+  return function(t) {
+    checkCollisions(currentEnemy);
+
+    var nextX = startX + (startX - endX)*t;
+    var nextY = startY + (startY - endY)*t;
+
+    currentEnemy.attr("cx",nextX).attr("cy",nextY);
+  };
+
 };
 
 // Update scores frequently
-var updateScores = function(scores){
+var updateScores = function(){
   d3.selectAll(".scoreboard > div > span")
-    .data(scores)
+    .data(arguments)
     .text(function(d){
             return d;
           });
@@ -165,10 +183,9 @@ var updates = function(){
   if(stats.current > stats.highScore){
     stats.highScore = stats.current;
   }
-  updateScores([stats.current, stats.highScore, stats.collision]);
+  updateScores(stats.current, stats.highScore, stats.collision);
 };
 
 
-setInterval(checkCollisions, 10);
-setTimeout(function(){return setInterval(updates,300)},3000)
-setTimeout(function(){return setInterval(enemyMethods.moveEnemy,1250)}, 1750);
+setTimeout(function(){return setInterval(updates,300*options.timeFactor)},3000*options.timeFactor)
+setTimeout(function(){return setInterval(enemyMethods.moveEnemy,1250*options.timeFactor)}, 1750*options.timeFactor);
