@@ -60,3 +60,67 @@ var enemyMethods = {
 };
 
 setInterval(enemyMethods.moveEnemy,1750);
+
+
+var playerSpecs = {
+  shape: "path",
+  path:   "M 9  1"
+        + "L 17 26"
+        + "L 9  22"
+        + "L 1  26"
+        + "L 9  1",
+  id: 0
+};
+
+var playerContainer = board.append("svg:svg")
+                           .attr("class","playerContainer")
+                           .attr("width","20")
+                           .attr("height","28")
+                           .attr("x",options.width/2)
+                           .attr("y",options.height/2);
+
+var player = board.selectAll(".player").data([player]);
+
+
+playerContainer.append("svg:" + playerSpecs.shape)
+               .attr("d",playerSpecs.path)
+               .attr("class","player")
+               .attr("stroke","#00D000")
+               .attr("stroke-opacity",1e-6)
+               .attr("stroke-width", 1e-6)
+               .attr("fill","#00D000")
+               .attr("fill-opacity",0.25)
+             .transition()
+               .duration(1000)
+               .attr("stroke-opacity",1)
+               .attr("stroke-width",2);
+
+
+var drag = d3.behavior.drag().on("drag",function(e){
+  d3.select(this)
+    .attr("x",d3.event.x)
+    .attr("y",d3.event.y);
+});
+
+d3.select(".playerContainer").call(drag);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
