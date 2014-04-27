@@ -1,11 +1,11 @@
 // start slingin' some d3 here.
 
 var options ={
-  width : 960,
-  height : 750,
+  width : window.innerWidth,
+  height : window.innerHeight,
   enemies: 42,
   enemyRadius: 10,
-  timeFactor: .5
+  timeFactor: 1
 };
 
 var stats = {
@@ -103,7 +103,7 @@ enemies.enter().append("svg:circle")
        .attr("stroke-width", 1e-6)
        .attr("fill","none")
     .transition()
-       .duration(3000*options.timeFactor)
+       .duration(1000*options.timeFactor)
        .attr("r",15)
        .attr("stroke-opacity",1)
        .attr("stroke-width",1.1);
@@ -112,14 +112,16 @@ enemies.enter().append("svg:circle")
 
 // Allow enemies to move randomly around the board
 var enemyMethods = {
-  moveEnemy : function(){
-    d3.selectAll(".enemy")
+  moveEnemy : function(elements){
+    elements
     .transition()
       .duration(1250*options.timeFactor)
+      // .ease("elastic")
       .attr("r",function(){return Math.random()*15 + 3;})
       .attr("cx", function(){return Math.random() * options.width;})
       .attr("cy", function(){return Math.random() * options.height;})
-      .tween("custom", tweenCollision);
+      // .tween("custom", tweenCollision)
+      .each('end',function(){enemyMethods.moveEnemy(d3.select(this))})
   }
 
 };
@@ -127,65 +129,51 @@ var enemyMethods = {
 
 
 // Check for collisions between player and any enemies
-var checkCollisions = function(enemy) {
+var checkCollisions = function() {
+  var collision = false;
   var player = d3.select(".playerContainer");
   var playerX = 1*player.attr("x") + (player.attr("width") / 2);
   var playerY = 1*player.attr("y") + (player.attr("height") / 2);
   var playerR = 8; // modeling player as circle to simplify calculations
-  var enemyX = 1*enemy.attr("cx");
-  var enemyY = 1*enemy.attr("cy");
-  var enemyR = 1*enemy.attr("r");
-  var distance = Math.sqrt(Math.pow((enemyY - playerY),2) + Math.pow((enemyX - playerX),2));
-  if (distance < enemyR + playerR) {
-    collide();
+
+  enemies.each(function(){
+    var enemyX = 1*d3.select(this).attr("cx");
+    var enemyY = 1*d3.select(this).attr("cy");
+    var enemyR = 1*d3.select(this).attr("r");
+    var distance = Math.sqrt(Math.pow((enemyY - playerY),2) + Math.pow((enemyX - playerX),2));
+    if (distance < enemyR + playerR) {
+      collision = true;
+    }
+  });
+
+  if(collision){
+    if(prevCollision !== collision){
+      stats.current = 0;
+      stats.collisions++;
+      d3.select('.scoreboard > .collisions > span').text(stats.collisions);
+    }
   }
+  prevCollision = collision;
 };
 
-// On collision, reset score and increase collisions count
-var collide = function() {
-  // console.log("collision!");
-  stats.current = 0;
-  stats.collisions++;
-  updateScores(stats.current, stats.highScore, stats.collisions);
-};
-
-var tweenCollision = function(endData) {
-  var currentEnemy = d3.select(this);
-  var startX = 1*currentEnemy.attr("cx");
-  var startY = 1*currentEnemy.attr("cy");
-  var endX = endData.x;
-  var endY = endData.y;
-
-
-  return function(t) {
-    checkCollisions(currentEnemy);
-
-    var nextX = startX + (startX - endX)*t;
-    var nextY = startY + (startY - endY)*t;
-
-    currentEnemy.attr("cx",nextX).attr("cy",nextY);
-  };
-
-};
-
-// Update scores frequently
-var updateScores = function(){
-  d3.selectAll(".scoreboard > div > span")
-    .data(arguments)
-    .text(function(d){
-            return d;
-          });
-};
 
 var updates = function(){
   // No particular reason for 683.
   stats.current += Math.floor(683 * Math.random());
-  if(stats.current > stats.highScore){
-    stats.highScore = stats.current;
-  }
-  updateScores(stats.current, stats.highScore, stats.collision);
+  stats.highScore = Math.max(stats.highScore,stats.current);
+
+  d3.select('.scoreboard > .current > span').text(stats.current);
+  d3.select('.scoreboard > .high > span').text(stats.highScore);
 };
 
 
+setTimeout(function(){return d3.timer(checkCollisions)},3000);
+
 setTimeout(function(){return setInterval(updates,300*options.timeFactor)},3000*options.timeFactor)
-setTimeout(function(){return setInterval(enemyMethods.moveEnemy,1250*options.timeFactor)}, 1750*options.timeFactor);
+
+setTimeout(function(){return enemyMethods.moveEnemy(enemies)},1250)
+
+
+
+
+
