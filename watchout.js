@@ -3,9 +3,10 @@
 var options ={
   width : window.innerWidth,
   height : window.innerHeight,
-  enemies: 42,
-  enemyRadius: 10,
-  timeFactor: 1
+  enemies: 25,
+  enemyRadius: 25,
+  timeFactor: 1.5,
+  speed: 2
 };
 
 var stats = {
@@ -26,7 +27,6 @@ var board = d3.select("body").append("svg")
               .style("height", options.height)
               .style("background-color", "black");
 
-
 // Create player
 var playerSpecs = {
   shape: "path",
@@ -41,7 +41,7 @@ var playerSpecs = {
 // Add player to board
 var playerContainer = board.append("svg:svg")
                            .attr("class","playerContainer")
-                           .attr("width","20")
+                           .attr("width","28")
                            .attr("height","28")
                            .attr("x",options.width/2)
                            .attr("y",options.height/2);
@@ -98,13 +98,13 @@ var enemies = board.selectAll(".enemy")
 enemies.enter().append("svg:circle")
        .attr("class","enemy")
        .attr("stroke","#00A000")
-       .attr("r", 0)
+       .attr("r", 1e-6)
        .attr("stroke-opacity",1e-6)
        .attr("stroke-width", 1e-6)
        .attr("fill","none")
     .transition()
        .duration(1000*options.timeFactor)
-       .attr("r",15)
+       .attr("r",options.enemyRadius)
        .attr("stroke-opacity",1)
        .attr("stroke-width",1.1);
 
@@ -116,8 +116,8 @@ var enemyMethods = {
     elements
     .transition()
       .duration(1250*options.timeFactor)
-      // .ease("elastic")
-      .attr("r",function(){return Math.random()*15 + 3;})
+      .ease("back-up")
+      .attr("r",function(){return Math.random()*30 + 3;})
       .attr("cx", function(){return Math.random() * options.width;})
       .attr("cy", function(){return Math.random() * options.height;})
       // .tween("custom", tweenCollision)
@@ -151,6 +151,9 @@ var checkCollisions = function() {
       stats.current = 0;
       stats.collisions++;
       d3.select('.scoreboard > .collisions > span').text(stats.collisions);
+      d3.select('.player').transition().duration(30).attr("transform","rotate(0,14,14)");
+      playerContainer.attr("x",options.width/2);
+      playerContainer.attr("y",options.height/2);
     }
   }
   prevCollision = collision;
@@ -174,6 +177,31 @@ setTimeout(function(){return setInterval(updates,300*options.timeFactor)},3000*o
 setTimeout(function(){return enemyMethods.moveEnemy(enemies)},1250)
 
 
-
+// Allow player to be controlled with arrow keys
+d3.select('body').on('keydown',function(){
+  var x = +playerContainer.attr("x");
+  var y = +playerContainer.attr("y");
+  var player = d3.select('.player');
+  if(d3.event.keyCode === 37){
+    //left
+    player.transition().duration(30).attr("transform","rotate(270,14,14)");
+    playerContainer.transition().duration(500).attr("x",Math.max(x-100*options.speed,0));
+  }
+  if(d3.event.keyCode === 38){
+    //up
+    player.transition().duration(30).attr("transform","rotate(0,14,14)");
+    playerContainer.transition().duration(500).attr("y",Math.max(y-100*options.speed,0));
+  }
+  if(d3.event.keyCode === 39){
+    //right
+    player.transition().duration(30).attr("transform","rotate(90,14,14)");
+    playerContainer.transition().duration(500).attr("x",Math.min(x+100*options.speed),options.width);
+  }
+  if(d3.event.keyCode === 40){
+    //down
+    player.transition().duration(30).attr("transform","rotate(180,14,14)");
+    playerContainer.transition().duration(500).attr("y",Math.min(y+100*options.speed),options.height);
+  }
+});
 
 
